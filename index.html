@@ -178,7 +178,7 @@
                         const errorData = await response.json().catch(() => ({}));
                         const errorMessage = errorData.error?.message || response.statusText || 'Bilinmeyen Hata';
                         
-                        if (response.status === 403 && apiKey === "YOUR_GEMINI_API_KEY_HERE") {
+                        if (response.status === 403 && apiKey === "AIzaSyBGyO7F4Tn-lmzqEVQzAb05zR0GQ3dg7vs") {
                             throw new Error("API Anahtarı Gerekli: GitHub Pages gibi dış ortamlarda apiKey değişkenini kendi anahtarınızla değiştirin.");
                         }
 
