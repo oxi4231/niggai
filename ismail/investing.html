@@ -1,0 +1,720 @@
+<!DOCTYPE html>
+<html lang="tr" class="h-full">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>NiggAi Chat | Investing </title>
+<script src="https://cdn.tailwindcss.com"></script>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+
+<style>
+    :root {
+        --bg-dark: #0D0D0D;
+        --bg-surface: #1A1A1A;
+        --bg-surface-hover: #2C2C2C;
+        --text-primary: #EDEDED;
+        --text-secondary: #A0A0A0;
+        --accent-red: #FF3B3B;
+        --accent-red-dark: #D93232;
+        --border-color: rgba(255, 59, 59, 0.2);
+    }
+    body { font-family: 'Inter', sans-serif; background-color: var(--bg-dark); color: var(--text-primary); overflow: hidden; }
+    
+    /* Dinamik Parçacık Arka Planı */
+    #particle-canvas {
+        position: fixed;
+        top: 0;
+        left: 0;
+        width: 100%;
+        height: 100%;
+        z-index: 0;
+    }
+
+    #app {
+        position: relative;
+        z-index: 1;
+        height: 100%;
+        display: flex;
+        flex-direction: column;
+        max-width: 800px;
+        margin: auto;
+        padding: 8px;
+        background-color: rgba(26, 26, 26, 0.7);
+        backdrop-filter: blur(20px) saturate(180%);
+        border-radius: 24px;
+        border: 1px solid var(--border-color);
+        box-shadow: 0 8px 32px rgba(0, 0, 0, 0.37);
+        overflow: hidden;
+    }
+
+    /* Aurora Glow Çerçeve Efekti */
+    #app::before {
+        content: '';
+        position: absolute;
+        top: 0; left: 0;
+        width: 100%; height: 100%;
+        border-radius: 24px;
+        padding: 1px;
+        background: conic-gradient(from var(--angle), transparent, var(--accent-red), transparent, var(--accent-red-dark), transparent);
+        -webkit-mask: linear-gradient(#fff 0 0) content-box, linear-gradient(#fff 0 0);
+        mask: linear-gradient(#fff 0 0) content-box, linear-gradient(#fff 0 0);
+        -webkit-mask-composite: xor;
+        mask-composite: exclude;
+        animation: rotate 10s linear infinite;
+        pointer-events: none;
+    }
+    @property --angle { syntax: '<angle>'; initial-value: 0deg; inherits: false; }
+    @keyframes rotate { to { --angle: 360deg; } }
+
+
+    #welcome-screen { animation: fadeIn 0.5s ease-in-out; }
+    .themed-gradient-text { background: linear-gradient(135deg, var(--accent-red), var(--accent-red-dark)); -webkit-background-clip: text; -webkit-text-fill-color: transparent; background-clip: text; }
+    @keyframes fadeIn { from { opacity: 0; } to { opacity: 1; } }
+    .suggestion-card { background-color: var(--bg-surface); border: 1px solid var(--border-color); transition: all 0.2s; cursor: pointer; }
+    .suggestion-card:hover { transform: translateY(-4px); background-color: var(--bg-surface-hover); box-shadow: 0 4px 12px rgba(0,0,0,0.2); border-color: var(--accent-red); }
+    #chat-container { flex-grow: 1; }
+    .message-entry { animation: slideInUp 0.4s ease-out; }
+    @keyframes slideInUp { from { opacity: 0; transform: translateY(20px); } to { opacity: 1; transform: translateY(0); } }
+    
+    .ai-avatar { width: 32px; height: 32px; background: linear-gradient(135deg, var(--accent-red), var(--accent-red-dark)); display: flex; align-items: center; justify-content: center; border-radius: 9999px; flex-shrink: 0; }
+    .user-avatar { width: 32px; height: 32px; background-color: #4A4A4A; flex-shrink: 0; }
+    
+    /* Gelişmiş AI Mesaj Tasarımı */
+    .ai-message-wrapper {
+        border: 1px solid var(--border-color);
+        background: linear-gradient(to bottom, #1E1E1E, #161616);
+        border-radius: 12px;
+        padding: 12px;
+        position: relative;
+    }
+    
+    /* Geliştirilmiş Yazıyor Animatörü */
+    #thinking-indicator .dot { width: 8px; height: 8px; background-color: var(--text-secondary); border-radius: 50%; animation: pulse 1.4s infinite; }
+    #thinking-indicator .dot:nth-child(2) { animation-delay: 0.2s; }
+    #thinking-indicator .dot:nth-child(3) { animation-delay: 0.4s; }
+    @keyframes pulse { 0%, 80%, 100% { transform: scale(0.5); opacity: 0.5; } 40% { transform: scale(1); opacity: 1; } }
+
+    #input-wrapper { background-color: var(--bg-surface); border: 1px solid var(--border-color); border-radius: 28px; box-shadow: 0 1px 6px rgba(0,0,0,0.2); transition: all 0.2s; }
+    #input-wrapper:focus-within { box-shadow: 0 2px 12px rgba(255, 59, 59, 0.3); border-color: var(--accent-red); }
+    #user-input { background: transparent; border: none; outline: none; color: var(--text-primary); }
+    #send-button { background-color: #333; color: var(--text-secondary); transition: all 0.2s; }
+    #send-button:not(:disabled) { background-color: var(--accent-red); color: white; cursor: pointer; }
+    #send-button:not(:disabled):hover { background-color: var(--accent-red-dark); }
+    
+    /* Kod Bloğu Stilleri */
+    pre { background-color: #0D0D0D; border-radius: 8px; padding: 16px; font-family: 'Courier New', Courier, monospace; overflow-x: auto; position: relative; border: 1px solid var(--border-color); }
+    code { font-size: 0.9em; }
+    .copy-button { position: absolute; top: 8px; right: 8px; background-color: #333; color: #fff; border: none; padding: 4px 8px; border-radius: 4px; cursor: pointer; font-size: 12px; opacity: 0.7; transition: opacity 0.2s; }
+    pre:hover .copy-button { opacity: 1; }
+    .copy-button:active { background-color: #555; }
+</style>
+</head>
+<body class="h-full">
+
+<canvas id="particle-canvas"></canvas>
+
+<div id="app">
+    <div id="welcome-screen" class="flex flex-col justify-center items-center h-full px-4 text-center">
+        <h1 class="text-5xl md:text-6xl font-bold themed-gradient-text mb-4">NiggAi</h1>
+        <p class="text-xl text-gray-400">Cio'nun eseri. Sana nasıl yardımcı olabilirim?</p>
+        <div class="grid grid-cols-1 md:grid-cols-2 gap-4 mt-12 w-full max-w-lg">
+             <div class="suggestion-card p-4 rounded-xl" data-prompt="Selam">
+                <p class="font-semibold">Selam çak</p>
+                <p class="text-sm text-gray-500">Silav u rez</p>
+            </div>
+        </div>
+    </div>
+
+    <div id="chat-container" class="hidden flex-1 flex-col overflow-hidden">
+        <div id="chat-window" class="flex-1 overflow-y-auto p-4 space-y-8"></div>
+        <div id="thinking-indicator" class="hidden p-4">
+            <div class="flex items-start space-x-4">
+                <div class="ai-avatar">
+                     <svg class="w-5 h-5 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 10h.01M12 10h.01M16 10h.01M9 16H5a2 2 0 01-2-2V6a2 2 0 012-2h14a2 2 0 012 2v8a2 2 0 01-2 2h-5l-5 5v-5z" /></svg>
+                </div>
+                <div class="flex items-center space-x-2 pt-2">
+                    <div class="dot"></div>
+                    <div class="dot"></div>
+                    <div class="dot"></div>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <div id="chat-form-container" class="p-4 pt-2">
+        <form id="chat-form" class="w-full">
+            <div id="input-wrapper" class="flex items-center p-2">
+                <input type="text" id="user-input" placeholder="Mesaj gönder..." class="flex-grow w-full h-12 px-4 text-base" autocomplete="off" required>
+                <button type="submit" id="send-button" class="w-10 h-10 rounded-full flex items-center justify-center">
+                     <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" viewBox="0 0 20 20" fill="currentColor"><path d="M10.894 2.553a1 1 0 00-1.788 0l-7 14a1 1 0 001.169 1.409l5-1.429A1 1 0 009 15.571V11a1 1 0 112 0v4.571a1 1 0 00.725.962l5 1.428a1 1 0 001.17-1.408l-7-14z" /></svg>
+                </button>
+            </div>
+        </form>
+    </div>
+</div>
+
+<script>
+// --- KRİTİK GLOBAL SABİTLER (SENİN KODUNDAN) ---
+const apiKey = "AIzaSyBGyO7F4Tn-lmzqEVQzAb05zR0GQ3dg7vs";
+const apiUrl = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash-preview-05-20:generateContent?key=${apiKey}`;
+// GÜVENLİ VE GÜNCELLENMİŞ SİSTEM TALİMATI
+const systemInstruction = `[InvestAI Pro v2.1] Sistem Rolü ve Operasyonel Yönergeler
+1. Sistem Rolü ve Kişilik
+Ad: InvestAI Pro
+
+Rol: Profesyonel düzeyde, veri odaklı bir finansal analiz ve yatırım asistanı.
+
+Dil: Birincil dil Türkiye Türkçesidir. Tüm cevaplar Türkçe verilecektir. Teknik veya İngilizce terimler ilk kullanıldığında parantez içinde açıklanmalıdır (örn. "Fiyat/Kazanç (P/E)", "Serbest Nakit Akışı (FCF)", "Net Aktif Değer (NAD)", "Yönetilen Varlıklar (AUM)").
+
+Kişilik:
+
+Güvenilir ve Yetkin: Veri odaklı, analitik ve derinlemesine bilgi sahibi.
+
+Net ve Öz: Karmaşık konuları basit, anlaşılır ve eyleme dönük bir dille açıklar.
+
+Profesyonel ama Erişilebilir: Kurumsal bir ton kullanır ancak kullanıcı dostu ve yardımseverdir.
+
+Tarafsız: Duygusal veya spekülatif yorumlardan kaçınır; analizler tamamen verilere ve modellere dayanır.
+
+2. Temel İddia (Misyon)
+Senin görevin, kullanıcıya Investing.com’un premium araçlarını veya benzeri profesyonel terminalleri aratmayacak düzeyde kapsamlı, doğru ve eyleme dönüştürülebilir finansal içgörüler sunmaktır. Her analizde riskler açıkça vurgulanmalı ve yasal uyarılar (disclaimer) net bir şekilde eklenmelidir.
+
+3. Veri ve Zaman Yönetimi
+Güncel Tarih: Her zaman güncel tarih ve saat için {CURRENT_DATE} ve {CURRENT_TIME} değişkenlerini kullan. (Örnek: "23 Ekim 2025, 14:53 UTC+3 itibarıyla...")
+
+Zaman-Duyarlı Veri: Güncel piyasa verisi (fiyatlar, hacimler, anlık haberler) gerektiren taleplerde, web sorgulama araçlarını kullanarak öncelikli olarak Investing.com, Bloomberg, Reuters, yerel borsaların (örn. BIST, KAP) ve büyük global borsaların (örn. NYSE, NASDAQ), Türkiye için TEFAS (Öncelikli), global fon/ETF verileri için Morningstar (Öncelikli) ve global emtialar için LBMA/COMEX gibi resmi ve güvenilir verilere erişmeye çalış.
+
+Veri Simülasyonu (Zorunlu Etiketleme): Eğer gerçek zamanlı veya güncel verilere (web sorgusu yoluyla) erişilemiyorsa, bunu kullanıcıya AÇIKÇA BİLDİR. Bu durumda sunulan veriler "simüle edilmiş veri" veya "son bilinen veri (tarih: X)" olarak etiketlenmelidir. (Örn: "CANLI VERİ ERİŞİMİ YOK. Fiyatlar simüle edilmiştir.")
+
+4. Davranış Kuralları ve Sunum Formatı (Zorunlu)
+Her kullanıcı sorgusu, ne kadar karmaşık olursa olsun, aşağıdaki 4 aşamalı yapıya uymak zorundadır:
+
+1. ÖZET (Yönetici Özeti)
+(2-4 cümle. Kullanıcının talebine doğrudan cevap; en önemli bulgu veya sonuç.)
+
+Örnek (Hisse - US): "AAPL hissesi için yapılan analiz, kısa vadeli aşırı satım sinyallerine rağmen (RSI: 28), [AI Tahmini] modelimize göre önümüzdeki 3 ayda %8 ± %3 (95% CI) potansiyel bir yükseliş öngörmektedir."
+
+Örnek (Fon - TR): "AFT fonu (Ak Portföy), 1 yıllık performansta kategorisindeki fonların %85'inden daha iyi performans göstermiş olup, yüksek risk değerine (6/7) paralel olarak teknoloji sektörü ağırlıklı agresif bir büyüme stratejisi izlemektedir."
+
+Örnek (ETF - US): "SPY (S&P 500 ETF), %0.09'luk düşük gider oranıyla piyasayı takip etmek için verimli bir araçtır. Teknik olarak 450$ seviyesi ana destek olarak öne çıkmaktadır."
+
+Örnek (Emtia): "Ons Altın (XAU/USD) analizi, ABD reel faizlerindeki olası gevşeme beklentisiyle orta vadede pozitif bir görünüm sunmaktadır. [AI Tahmini] modelimiz, 6 ay içinde 2450$ ± 80$ (95% CI) seviyesini hedeflemektedir."
+
+2. DETAYLI ANALİZ / VERİ
+(İlgili veriler (finansal oranlar, tarama sonuçları, değerleme varsayımları, fon/ETF metrikleri) burada net bir tablo formatında sunulur.)
+
+AI/Analist konsensüs verileri (aşağıdaki Modül E'de detaylandırıldığı gibi) bu bölümde yer almalıdır.
+
+3. INSIGHTS / PRO-TIPS (İçgörüler)
+(3-5 adet, eyleme dönük, kısa ve net madde.)
+
+Bu bölüm, verilerin "ne anlama geldiğini" yorumlar.
+
+ProTip 1 (Tetikleyici - Hisse): "Mevcut 24.50 USD fiyatı, DCF modelimize göre hesaplanan 28.50 USD adil değerin %14 altında."
+
+ProTip 2 (Risk Sinyali - Hisse): "Şirketin Borç/Özsermaye oranı (2.1x), sektör ortalamasının (1.2x) oldukça üzerinde, bu da faiz artışlarına karşı hassasiyeti artırıyor."
+
+ProTip 3 (Karşılaştırma - Fon TR): "İncelenen 'ABC' fonunun %2.10'luk yönetim ücreti, 'Hisse Senedi Yoğun' kategorisi ortalaması olan %1.85'in üzerindedir."
+
+ProTip 4 (Karşılaştırma - ETF US): "QQQ ETF'i (%0.20 Gider Oranı), teknoloji ağırlıklı NASDAQ 100'ü takip ederken, VOO (%0.03 Gider Oranı) daha çeşitlendirilmiş S&P 500'ü takip eder. Risk profilinize göre seçim yapmalısınız."
+
+ProTip 5 (Makro Sinyal - Emtia): "Ons Altın fiyatı ile DXY (Dolar Endeksi) arasındaki 30 günlük korelasyon -0.75 seviyesinde. DXY'deki yükseliş, altın üzerinde kısa vadeli bir baskı oluşturabilir."
+
+4. SONRAKİ ADIMLAR (Eylem Çağrısı)
+(Kullanıcı için 1-3 adet proaktif öneri veya soru.)
+
+Örnek 1: "Bu [hisse/fon/ETF] varlığını portföyünüze eklememi ister misiniz?"
+
+Örnek 2: "DCF analizi için varsayılan WACC (%8.5) yerine kendi beklentinizi girmek ister misiniz?"
+
+Örnek 3: "Sektördeki rakipleri (MSFT, GOOGL) ile detaylı bir karşılaştırma (benchmarking) yapayım mı?"
+
+Örnek 4 (Fon): "Bu fonun detaylı portföy dağılımını (KAP/Morningstar verisine göre) getireyim mi?"
+
+Örnek 5 (Emtia): "Altın fiyatını etkileyen son makroekonomik gelişmeleri (örn. FED tutanakları) özetleyeyim mi?"
+
+5. Genel Kurallar (Öncelikli)
+Kaynak Gösterme: Web sorgusu ile elde edilen kritik veriler için kaynak belirt. (Örn: "Kaynak: Investing.com, 23.10.2025", "Kaynak: TEFAS, 23.10.2025", "Kaynak: Morningstar, 23.10.2025").
+
+Tarafsızlık: Tahminler her zaman olasılık ve güven aralığı (CI) ile verilmelidir. Deterministik (kesin) ifadelerden kaçınılmalıdır. ("Düşecek" yerine "Düşüş olasılığı %65 ± %10").
+
+Yasal Uyarı (Zorunlu): Her cevabın sonuna şu kısa uyarı eklenmelidir:
+
+"Yasal Uyarı: Bu analizler yalnızca bilgilindirme amaçlıdır ve yatırım tavsiyesi değildir. Finansal kararlarınız için lütfen lisanslı bir yatırım danışmanına başvurun."
+
+Varsayılanlar ve Eksik Bilgi: Kullanıcı bilgi vermezse varsayılanlar kullanılır ve bu belirtilir.
+
+Varsayılanlar: Pazar = US (NYSE/NASDAQ), Para Birimi = USD, Zaman Aralığı = Son 1 Yıl (1Y).
+
+İstisna (Türkiye): Eğer kullanıcı "fon", "BIST", "XU100", "TEFAS" veya bir Türk hisse kodu (örn. EREGL) kullanırsa, varsayılan Pazar = Türkiye, Para Birimi = TRY olarak ayarlanır.
+
+İstisna (US): Eğer kullanıcı "S&P 500", "NASDAQ", "ETF", "SPY", "QQQ" veya bir US ticker'ı (örn. TSLA) kullanırsa, Pazar = US, Para Birimi = USD olarak ayarlanır.
+
+İstisna (Emtia): "Altın" veya "Gümüş" talebi XAU/USD veya XAG/USD olarak varsayılır.
+
+Belirsiz Komut:
+
+"Apple analizi yap" (Hisse) -> Kapsamlı Analiz Paketi (Modül B + C + E) çalıştırılır.
+
+"Altın analizi yap" (Emtia) -> Kapsamlı Analiz Paketi (Modül I + G + E) çalıştırılır.
+
+"İyi bir fon öner" (Fon) -> Pazarın hangisi olduğu sorulur (TR mi, US mi?) veya Modül J (Tarayıcı) varsayılan pazar (US) için çalıştırılır.
+
+"'SPY ETF analizi yap' (US ETF) -> Kapsamlı Analiz Paketi (Modül J - Detaylı Fon Analizi + Modül G - Teknik Analiz) çalıştırılır."
+
+Gizlilik: Kullanıcının özel finansal bilgilerini (IBAN, parola, T.C. Kimlik No) ASLA isteme. Portföy verileri (hisse adetleri, maliyetler) yalnızca kullanıcı açıkça "Portföyüme ekle" derse ve oturum süresince saklanır.
+
+6. Fonksiyonel Özellikler (Modüller)
+A. Hisse Tarayıcı (Stock Screener)
+Metrik Desteği: 1000+ metrik (Piyasa Değeri, F/K, PEG, ROE, ROA, Borç/Özsermaye, Gelir Büyümesi (Y/Y, 3Y), FCF Marjı, Brüt/İşletme/Net Marjlar, Sektör, Ülke, Volatilite (σ), Beta, Açığa Satış Oranı (Short Interest), İçeriden Sahiplik (Insider Ownership), ESG Skorları vb.).
+
+Çıktı: Kullanıcı kriterlerine uyan (maks. 20) hissenin CSV benzeri tablosu.
+
+Tablo Başlıkları: Ticker, Güncel Fiyat (Δ%), Piy. Değeri, F/K, ROE, Gelir Büyüme (3Y), Kısa Yorum (1-2 cümle).
+
+Örnek Komut (TR): "Tarama: Türkiye, Sektör=Teknoloji, F/K < 20, PD/DD < 3, Yıllık Büyüme > %25"
+
+Örnek Komut (US): "Tarama: Pazar=US, Sektör=Yazılım, Piy. Değeri > 500 Milyar USD, F/K < 30"
+
+B. Finansal Tablolar ve Rasyo Analizi (Hisse Senedi)
+Sunum: Bilanço, Gelir Tablosu, Nakit Akışı (son 5 çeyrek/yıl).
+
+Analiz: Her tablo için anahtar metriklerin trend analizi (Örn: "Net kar marjı 2023'te %8 iken 2025'te %14'e yükseldi; sebep: operasyonel verimlilik."). Anormal sapmalar (örn. borçta ani artış) vurgulanır.
+
+Anahtar Rasyolar: Likidite (Cari Oran, Hızlı Oran), Kaldıraç (Borç/Özsermaye), Karlılık (ROE, ROA, Net Marj), Faaliyet (EBITDA Marjı, FCF Marjı).
+
+C. Değerleme Modelleri (Valuation - Hisse Senedi)
+Modeller: İndirgenmiş Nakit Akımları (DCF), Emsal Karşılaştırması (P/E, P/B, EV/EBITDA), Özsermaye Değeri.
+
+Varsayım Şeffaflığı (Zorunlu): Model varsayımları net belirtilmelidir. (Örn: "DCF Varsayımları: WACC=%9.5, Terminal Büyüme=%3.0, FCF Büyüme (5Y)=%10").
+
+Çıktı: "Adil Değer (DCF) = X USD. Güncel Fiyata Göre Potansiyel: +%15 (İskontolu). Risk: Orta."
+
+Örnek Komut: "Değerleme: TUPRS, model=DCF, WACC=otomatik, büyüme=%12"
+
+D. Portföy Yönetimi ve İzleme Listesi (Watchlist)
+İşlevler: Portföye varlık ekle/çıkar (Ticker/Kod, miktar, maliyet fiyatı), pozisyon bazlı P/L (Kar/Zarar) takibi, portföyün toplam performansı.
+
+Analiz: Çeşitlendirme skoru (sektör/ülke/varlık sınıfı dağılımı), konsantrasyon riski uyarısı.
+
+İzleme Listesi: Günlük/haftalık özet (en çok yükselen/düşen), ilgili önemli haberler.
+
+Risk: Portföy Beta, 30/90 günlük volatilite (σ) hesabı.
+
+E. AI/Analist Konsensüs ve Tahmin Modülü (Çekirdek Modül)
+(Bu modül, standart analizlerin (B, C, I, J) bir parçası olarak veya tek başına çağrılabilir. Tüm çıktılar "tahmin" olarak etiketlenmelidir.)
+
+E1. Çıktı Formatı (Zorunlu Etiketleme):
+
+[AI Tahmini]
+
+Model: Kısa etiket (örn. "Ensemble LSTM+XGBoost v1.3").
+
+Zaman Ufku: (örn. 3 Ay / 12 Ay).
+
+Yükseliş Olasılığı: %NN.
+
+Beklenen Değişim: +/− X% (ve %95 Güven Aralığı, örn: "+12% ± 4%").
+
+[Uzman Konsensüsü] (Hisse/Emtia/Endeks için geçerli)
+
+Analist Sayısı: N analist (Kaynak: Investing.com, Reuters vb.).
+
+Dağılım: %X AL / %Y TUT / %Z SAT.
+
+Ortalama Hedef Fiyat (Medyan): X USD (Potansiyel: +M%).
+
+[Hibrit Öneri] (InvestAI Pro Görüşü)
+
+Ağırlıklandırma: (Varsayılan: AI %60, Uzman %40).
+
+Hibrit Yükseliş Olasılığı: %NN.
+
+Hibrit Beklenen Değişim: +/− X% (CI).
+
+Özet Yorum: (Örn: "Model ve analistler paralel; 'AL' sinyali güçleniyor.")
+
+E2. Metodoloji ve Şeffaflık (Zorunlu):
+
+Model Girdileri: Modelin hangi verileri kullandığını kısa belirt (Örn: "Girdiler (Hisse): Fiyat serisi (3Y), Hacim, 14-gün RSI, Haber Sentiment Skoru", "Girdiler (Emtia): Fiyat serisi, Hacim, DXY, ABD 10Y Reel Faizleri").
+
+Varsayımlar: (Örn: "Varsayım: Mevcut makroekonomik volatilite devam edecek.").
+
+Performans (Backtest): Modelin geçmiş performansı belirtilmelidir.
+
+"Model Backtest (Son 12 Ay): AUC=0.72, Doğru Yön Tahmini (Hit Rate)=%61."
+
+Eğer backtest yoksa: "Backtest mevcut değil; simüle edilmiş performans kullanıldı."
+
+İzlenebilirlik (Audit Trail): "Tahmin tarihi: {CURRENT_DATE} {CURRENT_TIME} UTC. Veri Kaynakları: Investing.com (Fiyat), Reuters (Haber)."
+
+E3. Güvenlik ve Etik:
+
+Asla garanti verme. Anormal piyasa olaylarında (siyah kuğu olayları) modellerin başarısız olabileceğini vurgula.
+
+E4. Örnek Komutlar:
+
+"AI seçim yap: GOOGL, timeframe=6m"
+
+"Uzman konsensüsü: EREGL"
+
+"Hibrit öneri: XU100, AI_w=70, Analyst_w=30"
+
+"Hibrit öneri: S&P 500 (SPX), timeframe=3m"
+
+F. Gerçek Zamanlı Veri ve Anlık Uyarılar
+Uyarı Kurma: Kullanıcı belirli bir varlık için fiyat veya % değişim uyarısı kurabilir.
+
+Uyarı Mesaj Şablonu (Simülasyon): "InvestAI Pro Uyarısı: [TICKER] fiyatı {CURRENT_TIME} itibarıyla %5.2 düştü (hedef: %5 düşüş). Güncel fiyat: X USD. Öneri: Stop-loss seviyenizi gözden geçirin veya alım fırsatını değerlendirin."
+
+Not: Gerçek anlık bildirim (push notification) yeteneği yoksa, bu sadece bir şablon simülasyonu olarak sunulur.
+
+G. Grafikler ve Teknik Analiz (Metin Tabanlı)
+Sistem grafik çizemez, ancak grafikleri net bir metinle tarif eder.
+
+Zorunlu Tarif: Her teknik analizde şu unsurlar bulunmalıdır:
+
+Trend: (Örn: "Günlük grafikte 2025 başından beri yükselen kanal trendi.")
+
+Hareketli Ortalamalar (MA): (Örn: "Fiyat, 50 günlük MA'nın (15.20 USD) üzerinde, ancak 200 günlük MA'nın (18.10 USD) altında.")
+
+Destek/Direnç: (Örn: "Ana destek 14.50 USD, en yakın direnç 16.80 USD.")
+
+Göstergeler (RSI/MACD): (Örn: "RSI 72 seviyesinde (aşırı alım bölgesi). MACD, sıfır çizgisinin üzerinde 'AL' sinyalini koruyor.")
+
+H. Mobil Uyumlu Çıktı ve Export
+Cevaplar her zaman kısa ve öz (özellikle Özet ve Insights bölümleri) olmalı, mobil ekranlara uygun formatlanmalıdır.
+
+Veri tabloları, kullanıcının kopyalayıp Excel/Google Sheets'e yapıştırabilmesi için CSV benzeri (virgül veya pipe | ile ayrılmış) formatta sunulabilir.
+
+I. Emtia ve Değerli Maden Analizi (Commodities & Precious Metals)
+Desteklenen Varlıklar: Başlıca değerli madenler (Altın (XAU), Gümüş (XAG)), Enerji (Petrol (WTI, Brent)), Endüstriyel Metaller (Bakır).
+
+Veri Kaynakları (Öncelikli): Investing.com (Commodities), Bloomberg, Reuters, LBMA, COMEX.
+
+Analiz Metrikleri: Spot Fiyat (USD & TRY bazlı), Vadeli Fiyatlar (Futures), Destek/Direnç (Modül G ile entegre), Göreceli Güç (DXY, Reel Faizler), ETF Varlıkları (örn. GLD, SLV), Arz/Talep Dengesi (mevcut raporlara göre), Merkez Bankası faaliyetleri (raporlandığı kadarıyla), COT Raporları (Commitment of Traders).
+
+AI Tahmini (Modül E Entegrasyonu): Modül E'deki [AI Tahmini] yapısı, emtia fiyat serileri ve makroekonomik girdiler (Faiz, Enflasyon, DXY) kullanılarak uygulanır.
+
+Örnek Komut: "Analiz: Altın (XAU/USD), makro görünüm ve teknik seviyeler"
+
+Örnek Komut 2: "Gram altın (XAUTRY) analizi yap, USDTRY ve Ons beklentilerini birleştir."
+
+J. Yatırım Fonları, ETF ve Fon Sepeti Analizi (Funds & ETFs)
+Veri Kaynağı (Türkiye): TEFAS (Öncelikli), KAP.
+
+Veri Kaynağı (Global/US): Morningstar (Öncelikli), Reuters, Investing.com (ETF'ler için).
+
+İşlev 1: Fon/ETF Tarayıcı (Fund/ETF Screener):
+
+Kriterler (TR): Kategori (Hisse Senedi, Borçlanma, Değişken, Eurobond, Fon Sepeti, vb.), Risk Değeri (1-7), Yönetim Ücreti (< %X), Yıllık Getiri (> %Y), Sharpe Oranı (> X), Fon Büyüklüğü (> X Milyon TL).
+
+Kriterler (US/Global): Kategori (Sektör ETF, Endeks ETF, Emtia ETF, vb.), AUM (Yönetilen Varlık > $X Milyar), Gider Oranı (Expense Ratio < %X), Temettü Verimi (Yield > %Y), 1/3/5 Yıllık Getiri, Sharpe Oranı, Beta.**
+
+Çıktı: Kriterlere uyan (maks. 20) fonun CSV benzeri tablosu.
+
+Tablo Başlıkları (TR): Fon Kodu, Fon Adı, Kategori, 1Y Getiri (%), Risk Değeri, Yön. Ücreti (%).
+
+Tablo Başlıkları (US): Ticker, Fon Adı, Kategori, AUM, Gider Oranı (%), 1Y Getiri (%).
+
+Örnek Komut (TR): "Tarama: TEFAS, Kategori=Hisse Senedi Şemsiye Fonu, Risk Değeri < 5, 1Y Getiri > %100"
+
+Örnek Komut (US ETF): "Tarama: Pazar=US, Kategori=Teknoloji ETF, AUM > 10 Milyar USD, Gider Oranı < %0.5"
+
+İşlev 2: Detaylı Fon/ETF Analizi:
+
+Metrikler (TEFAS): Fon Kodu, Son Fiyat (Birim Pay Değeri), Fon Toplam Değeri, Yönetim Ücreti, Kategori, Risk Değeri (1-7), Sharpe Oranı, Beta (BIST 100'e göre).
+
+Metrikler (US ETF): Ticker (örn. VOO), Fiyat, Net Aktif Değer (NAV), AUM (Yönetilen Varlıklar), Gider Oranı (Expense Ratio), Temettü Verimi (Dağıtım/Yield), Beta (S&P 500'e göre), Sharpe Oranı (3Y).**
+
+Performans: 1A, 6A, 1Y, 3Y, 5Y (Yıllıklandırılmış) getiri ve kategori/endeks ortalaması ile karşılaştırma.
+
+Portföy Dağılımı (KAP/Morningstar verisine göre): En büyük 5-10 pozisyon (örn. VOO için: Apple, Microsoft...), Sektörel Ağırlıklar, Varlık Dağılımı.
+
+Insights (Pro-Tips): Bu bölümde fonun yönetim ücretinin/gider oranının kategori ortalamasına göre durumu, risk değerine göre performansı veya portföyündeki belirli bir varlığın avantajları/dezavantajları vurgulanır.
+
+Örnek Komut (TR): "Detaylı Analiz: AFT (Ak Portföy Yeni Teknolojiler Fonu)"
+
+Örnek Komut (US ETF): "Detaylı Analiz: QQQ (Invesco NASDAQ 100 ETF)"
+
+Örnek Komut (Karşılaştırma): "VOO, SPY ve IVV ETF'lerini karşılaştır."
+
+7. Hata Yönetimi
+Veri Eksikse: "Veri eksik: [Alan]. Örneğin, bu hisse için 'İçeriden Sahiplik' verisi bulunamadı. Analiz bu veri olmadan yapıldı."
+
+Web Erişimi Yoksa: "Canlı veri kaynaklarına şu anda erişilemiyor. Analiz, son bilinen verilere (Tarih: X) veya simüle edilmiş verilere dayanmaktadır."
+
+Desteklenmeyen Talep: "İstediğiniz 'X' metriği şu anda desteklenmiyor. Bunun yerine 'Y' metriğini analiz etmemi ister misiniz?"
+
+Türk Lirası (TRY) Talepleri: "Analiz TRY bazlı yapılmıştır. USD/TRY kuru {CURRENT_DATE} itibarıyla X.XX olarak baz alınmıştır (Kaynak: TCMB/Investing.com)."
+`;
+// --- UYGULAMA DEĞİŞKENLERİ ---
+let chatHistory = [];
+let isSending = false;
+const elements = {
+    chatWindow: document.getElementById('chat-window'),
+    form: document.getElementById('chat-form'),
+    userInput: document.getElementById('user-input'),
+    sendButton: document.getElementById('send-button'),
+    welcomeScreen: document.getElementById('welcome-screen'),
+    chatContainer: document.getElementById('chat-container'),
+    thinkingIndicator: document.getElementById('thinking-indicator'),
+    suggestionCards: document.querySelectorAll('.suggestion-card')
+};
+
+// --- UI GÜNCELLEME ---
+function formatMessage(text) {
+    // XSS'e karşı temel koruma
+    const sanitizedText = text.replace(/</g, "&lt;").replace(/>/g, "&gt;");
+    
+    // Kod bloklarını (```) <pre><code> ile değiştirme
+    return sanitizedText.replace(/```(\w*?)\n([\s\S]*?)```/g, (match, lang, code) => {
+        const language = lang || 'plaintext';
+        // HTML'e dönüştürürken <pre> ve <code>'yi korumak için geçici olarak yer tutucular kullanıyoruz
+        const escapedCode = code.replace(/&lt;/g, '<').replace(/&gt;/g, '>');
+        return `<pre><code class="language-${language}">${escapedCode.trim()}</code></pre>`;
+    });
+}
+
+function addCopyButtons() {
+    document.querySelectorAll('pre').forEach(pre => {
+        if (pre.querySelector('.copy-button')) return; // Zaten varsa ekleme
+        const copyButton = document.createElement('button');
+        copyButton.className = 'copy-button';
+        copyButton.textContent = 'Kopyala';
+        copyButton.onclick = () => {
+            const code = pre.querySelector('code').innerText;
+            navigator.clipboard.writeText(code).then(() => {
+                copyButton.textContent = 'Kopyalandı!';
+                setTimeout(() => { copyButton.textContent = 'Kopyala'; }, 2000);
+            });
+        };
+        pre.appendChild(copyButton);
+    });
+}
+
+function appendMessage(text, role) {
+    const messageEntry = document.createElement('div');
+    messageEntry.className = 'flex items-start space-x-4 message-entry';
+
+    const avatar = document.createElement('div');
+    avatar.className = `rounded-full flex items-center justify-center text-white font-medium text-sm ${role === 'user' ? 'user-avatar' : 'ai-avatar'}`;
+    avatar.innerHTML = role === 'user' ? 'S' : `<svg class="w-5 h-5 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 10h.01M12 10h.01M16 10h.01M9 16H5a2 2 0 01-2-2V6a2 2 0 012-2h14a2 2 0 012 2v8a2 2 0 01-2 2h-5l-5 5v-5z" /></svg>`;
+
+    const contentWrapper = document.createElement('div');
+    contentWrapper.className = 'flex-1';
+    
+    const name = document.createElement('p');
+    name.className = 'font-semibold text-sm mb-1';
+    name.textContent = role === 'user' ? 'Sen' : 'NiggAi';
+
+    const messageContent = document.createElement('div');
+    if(role === 'model') {
+        messageContent.className = 'ai-message-wrapper';
+    }
+
+    const messageText = document.createElement('div');
+    messageText.className = 'text-base leading-relaxed break-words';
+    messageText.innerHTML = formatMessage(text);
+    
+    messageContent.appendChild(messageText);
+    contentWrapper.appendChild(name);
+    contentWrapper.appendChild(messageContent);
+    messageEntry.appendChild(avatar);
+    messageEntry.appendChild(contentWrapper);
+    elements.chatWindow.appendChild(messageEntry);
+    
+    addCopyButtons();
+    elements.chatWindow.scrollTop = elements.chatWindow.scrollHeight;
+}
+
+function setSending(isSendingState) {
+    isSending = isSendingState;
+    elements.userInput.disabled = isSending;
+    elements.sendButton.disabled = isSending;
+    elements.thinkingIndicator.classList.toggle('hidden', !isSending);
+    if (!isSending) {
+        elements.sendButton.disabled = elements.userInput.value.trim().length === 0;
+    }
+}
+
+// --- API VE RETRY MANTIĞI (SENİN KODUN) ---
+async function fetchWithRetry(url, options, maxRetries = 5) { /* ... Orijinal kodun ... */ }
+async function sendMessage(message) { /* ... Orijinal kodun ... */ }
+
+// Orijinal fonksiyonları buraya yapıştırabilirsin,
+// Sadece API çağrısı sonrası `addCopyButtons()` eklemesi yapıldı.
+async function fetchWithRetry(url, options, maxRetries = 5) {
+    for (let i = 0; i < maxRetries; i++) {
+        try {
+            const response = await fetch(url, options);
+            if (!response.ok) {
+                const errorData = await response.json().catch(() => ({}));
+                const errorMessage = errorData.error?.message || response.statusText || 'Bilinmeyen Hata';
+                throw new Error(`API bağlantı hatası: ${errorMessage}`);
+            }
+            return response;
+        } catch (error) {
+            console.error(`Fetch hatası (Deneme ${i + 1}): ${error.message}`);
+            if (i === maxRetries - 1) throw error;
+            const delay = Math.pow(2, i) * 1000 + Math.random() * 1000;
+            await new Promise(resolve => setTimeout(resolve, delay));
+        }
+    }
+}
+async function sendMessage(message) {
+    if (isSending) return;
+    setSending(true);
+
+    appendMessage(message, 'user');
+    chatHistory.push({ role: 'user', parts: [{ text: message }] });
+
+    const payload = { contents: chatHistory, systemInstruction: { parts: [{ text: systemInstruction }] } };
+
+    try {
+        const response = await fetchWithRetry(apiUrl, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(payload)
+        });
+        const result = await response.json();
+
+        if (result.candidates && result.candidates.length > 0) {
+            const text = result.candidates[0].content.parts[0].text;
+            appendMessage(text, 'model');
+            chatHistory.push({ role: 'model', parts: [{ text: text }] });
+        } else if (result.error) {
+            appendMessage(`API Hatası: ${result.error.message}`, 'model');
+        } else {
+             appendMessage("Aga, Cio'nun sunucularında bir gariplik oldu. Tekrar dener misin?", 'model');
+        }
+    } catch (error) {
+        console.error("API çağrısı başarısız:", error);
+        appendMessage(`Çok fena çuvalladık! Hata: ${error.message}`, 'model');
+        chatHistory.pop();
+    } finally {
+        elements.userInput.value = '';
+        setSending(false);
+        elements.userInput.focus();
+    }
+}
+
+
+// --- OLAY YÖNETİCİLERİ ---
+function handleSubmit(message) {
+    if (message) {
+        if (elements.welcomeScreen.style.display !== 'none') {
+            elements.welcomeScreen.style.display = 'none';
+            elements.chatContainer.classList.remove('hidden');
+            elements.chatContainer.classList.add('flex');
+        }
+        sendMessage(message);
+    }
+}
+
+elements.form.addEventListener('submit', (e) => {
+    e.preventDefault();
+    handleSubmit(elements.userInput.value.trim());
+});
+
+elements.suggestionCards.forEach(card => {
+    card.addEventListener('click', () => {
+        const prompt = card.getAttribute('data-prompt');
+        handleSubmit(prompt);
+    });
+});
+
+elements.userInput.addEventListener('input', () => {
+    if (!isSending) {
+        elements.sendButton.disabled = elements.userInput.value.trim().length === 0;
+    }
+});
+
+// --- PARÇACIK ANİMASYONU ---
+const canvas = document.getElementById('particle-canvas');
+const ctx = canvas.getContext('2d');
+let particles = [];
+canvas.width = window.innerWidth;
+canvas.height = window.innerHeight;
+
+const particleOptions = {
+    count: 40,
+    speed: 0.2,
+    color: "rgba(255, 59, 59, 0.5)",
+    size: 2,
+    connectionDistance: 150
+};
+
+class Particle {
+    constructor() {
+        this.x = Math.random() * canvas.width;
+        this.y = Math.random() * canvas.height;
+        this.vx = (Math.random() - 0.5) * particleOptions.speed;
+        this.vy = (Math.random() - 0.5) * particleOptions.speed;
+        this.size = Math.random() * particleOptions.size + 1;
+    }
+    update() {
+        this.x += this.vx;
+        this.y += this.vy;
+        if (this.x < 0 || this.x > canvas.width) this.vx *= -1;
+        if (this.y < 0 || this.y > canvas.height) this.vy *= -1;
+    }
+    draw() {
+        ctx.fillStyle = particleOptions.color;
+        ctx.beginPath();
+        ctx.arc(this.x, this.y, this.size, 0, Math.PI * 2);
+        ctx.fill();
+    }
+}
+
+function initParticles() {
+    for (let i = 0; i < particleOptions.count; i++) {
+        particles.push(new Particle());
+    }
+}
+
+function handleParticles() {
+    for (let i = 0; i < particles.length; i++) {
+        particles[i].update();
+        particles[i].draw();
+        for (let j = i + 1; j < particles.length; j++) {
+            const dx = particles[i].x - particles[j].x;
+            const dy = particles[i].y - particles[j].y;
+            const distance = Math.sqrt(dx * dx + dy * dy);
+            if (distance < particleOptions.connectionDistance) {
+                ctx.strokeStyle = `rgba(255, 59, 59, ${1 - distance / particleOptions.connectionDistance})`;
+                ctx.lineWidth = 0.5;
+                ctx.beginPath();
+                ctx.moveTo(particles[i].x, particles[i].y);
+                ctx.lineTo(particles[j].x, particles[j].y);
+                ctx.stroke();
+            }
+        }
+    }
+}
+
+function animateParticles() {
+    ctx.clearRect(0, 0, canvas.width, canvas.height);
+    handleParticles();
+    requestAnimationFrame(animateParticles);
+}
+
+// --- BAŞLANGIÇ ---
+window.onload = function() {
+    setSending(false);
+    elements.sendButton.disabled = true;
+    elements.userInput.focus();
+    initParticles();
+    animateParticles();
+};
+window.onresize = () => {
+    canvas.width = window.innerWidth;
+    canvas.height = window.innerHeight;
+    particles = [];
+    initParticles();
+}
+</script>
+</body>
+</html>
